@@ -1,0 +1,60 @@
+{
+  "name": "route-param-alias",
+  "version": "0.0.0",
+  "description": "Express.js middleware to substitute route parameters with other values",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aposhian/route-param-alias.git"
+  },
+  "keywords": [
+    "express"
+  ],
+  "author": "Adam Aposhian",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Aposhian/route-param-alias/issues"
+  },
+  "homepage": "https://github.com/Aposhian/route-param-alias#readme",
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "^8.0.1",
+    "@semantic-release/npm": "^7.0.5",
+    "@semantic-release/release-notes-generator": "^9.0.1",
+    "commitizen": "^4.2.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^4.2.5",
+    "jest": "^26.4.2",
+    "semantic-release": "^17.1.1",
+    "standard": "^14.3.4"
+  },
+  "standard": {
+    "env": [
+      "jest"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
+      "pre-push": "npm test"
+    }
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/npm"
+    ]
+  },
+  "files": [
+    "index.js",
+    "CHANGELOG.md",
+    "package.json",
+    "package-lock.json"
+  ],
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
