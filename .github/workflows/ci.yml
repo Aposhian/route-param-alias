@@ -1,4 +1,4 @@
-name: semantic-release
+name: ci
 
 on:
  pull_request:
