@@ -5,4 +5,33 @@
 # route-param-alias
 Express.js middleware to substitute route parameters with values from other parts of the request.
 
+Currently, this is supported in the form of [JSON Web Tokens](https://jwt.io/introduction/) in the request headers or as query parameters.
 
+## Usage
+
+
+```javascript
+const routeParamAlias = require('route-param-alias')
+const meConverter = routeParamAlias({
+  alias: 'me',
+  paramName: 'id',
+  tokenLocation: 'header',
+  tokenName: 'Authorization',
+  payloadKey: 'sub'
+})
+
+app.get('/:id', (req, res) => {
+  const payload = jwt.decode(req.headers.authorization)
+
+  /// Assertions before applying middleware
+  assert.equals(req.params.id, 'me')
+  assert.not.equals(req.params.id, payload.sub)
+
+  meConverter(req, res, () => {
+    /// Assertions after applying middleware
+    assert.not.equals(req.params.id, 'me')
+    assert.equals(req.params.id, payload.sub)
+    ...
+  })
+})
+```
