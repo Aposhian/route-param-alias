@@ -1,14 +1,12 @@
 const jwt = require('jsonwebtoken')
 
+const supportedTokenLocations = ['header', 'query']
+
 const getToken = ({ req, tokenLocation, tokenName }) => {
   if (tokenLocation === 'header') {
     return req.get(tokenName)
-  } else if (tokenLocation === 'query') {
-    if (!req.query) {
-      throw new Error('No query object found on request object')
-    }
-
-    return req.query[tokenName]
+  } else {
+    return req[tokenLocation][tokenName]
   }
 }
 
@@ -22,8 +20,33 @@ const getToken = ({ req, tokenLocation, tokenName }) => {
  */
 const getParamValue = ({ req, tokenLocation, tokenName, payloadKey }) => {
   const token = getToken({ req, tokenLocation, tokenName })
-  const { [payloadKey]: value } = jwt.decode(token.replace('Bearer ', ''))
+  if (!token) {
+    const err = new Error('Cannot subsitute value for alias: token does not exist')
+    err.statusCode = 400
+    throw err
+  }
+
+  const decoded = jwt.decode(token.replace('Bearer ', ''))
+
+  if (!decoded) {
+    const err = new Error('Cannot substitue value for alias: token is not a JWT')
+    err.statusCode = 400
+    throw err
+  }
+
+  const { [payloadKey]: value } = decoded
+
+  if (!value) {
+    const err = new Error('Cannot subsitute value for alias: not contained in token')
+    err.statusCode = 400
+    throw err
+  }
+
   return value
+}
+
+const required = (name) => {
+  throw new Error(`Required parameter: ${name}`)
 }
 
 /**
@@ -58,15 +81,23 @@ const getParamValue = ({ req, tokenLocation, tokenName, payloadKey }) => {
  * ```
  */
 module.exports = ({
-  alias,
-  paramName,
-  tokenLocation = 'header',
-  tokenName = 'Authorization',
-  payloadKey
-}) => (req, _, next) => {
-  if (req.params[paramName] === alias) {
-    req.params[paramName] = getParamValue({ req, tokenLocation, tokenName, payloadKey })
+  alias = required('alias'),
+  paramName = required('paramName'),
+  tokenLocation = required('tokenLocation'),
+  tokenName = required('tokenName'),
+  payloadKey = required('payloadKey')
+}) => {
+  if (!supportedTokenLocations.includes(tokenLocation)) {
+    throw new Error(`Unsupported tokenLocation: ${tokenLocation}`)
   }
 
-  next()
+  const middleware = (req, _, next) => {
+    if (req.params[paramName] === alias) {
+      req.params[paramName] = getParamValue({ req, tokenLocation, tokenName, payloadKey })
+    }
+
+    next()
+  }
+
+  return middleware
 }
