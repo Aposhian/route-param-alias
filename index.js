@@ -49,6 +49,11 @@ const required = (name) => {
   throw new Error(`Required parameter: ${name}`)
 }
 
+const rewriteUrl = ({ req, alias, value }) => {
+  const re = new RegExp(`(?<=/)${alias}(?=/)?`)
+  return req.url.replace(re, value)
+}
+
 /**
  * Allows using route parameter aliases in a request. Aliases are mapped to values
  * in the payload of a JWT provided elsewhere in the request
@@ -93,7 +98,11 @@ module.exports = ({
 
   const middleware = (req, _, next) => {
     if (req.params[paramName] === alias) {
-      req.params[paramName] = getParamValue({ req, tokenLocation, tokenName, payloadKey })
+      const value = getParamValue({ req, tokenLocation, tokenName, payloadKey })
+
+      req.params[paramName] = value
+
+      req.url = rewriteUrl({ req, alias, value })
     }
 
     next()

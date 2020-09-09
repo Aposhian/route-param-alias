@@ -35,3 +35,8 @@ app.get('/:id', (req, res) => {
   })
 })
 ```
+
+### URL rewriting
+In order to match up with downstream middleware or handlers, this middleware also rewrites the url variables on the Express.js request object.
+
+This is done by rewriting `req.url`, which is parsed to produce `req.path`. This does not modify `req.baseUrl` or `req.originalUrl`.

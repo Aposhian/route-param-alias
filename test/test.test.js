@@ -5,7 +5,13 @@ const jwt = require('jsonwebtoken')
 
 const any = () => Math.random().toString(36).substring(2, 15)
 
-const echoParams = (req, res) => res.json(req.params)
+const echoRequestObject = (req, res) => res.json({
+  params: req.params,
+  baseUrl: req.baseUrl,
+  path: req.path,
+  originalUrl: req.originalUrl,
+  url: req.url
+})
 
 const createApp = ({ middlewares = [], paramNames = [] }) => {
   const app = express()
@@ -13,7 +19,7 @@ const createApp = ({ middlewares = [], paramNames = [] }) => {
   // ex: '/:param1/:param2'
   const route = paramNames.map(paramName => `/:${paramName}`).join()
 
-  app.post(route, ...middlewares, echoParams)
+  app.post(route, ...middlewares, echoRequestObject)
 
   return app
 }
@@ -92,15 +98,35 @@ describe('routeParamAlias middleware', () => {
 
       const token = jwt.sign({ [paramName]: headerParam }, 'super_secret')
 
+      const route = `/${routeParam}`
+
       const res = await request(app)
-        .post(`/${routeParam}`)
+        .post(route)
         .set('x-param', token)
         .expect(200)
         .expect('Content-Type', /json/)
 
-      expect(res.body).toMatchObject({
+      const {
+        params,
+        originalUrl,
+        baseUrl,
+        url,
+        path
+      } = res.body
+
+      expect(params).toMatchObject({
         [paramName]: isAlias ? headerParam : routeParam
       })
+
+      expect(originalUrl).toEqual(route)
+
+      expect(originalUrl).toEqual(route)
+      expect(baseUrl).toEqual('')
+
+      const expectedRoute = isAlias ? route.replace(alias, headerParam) : route
+
+      expect(url).toEqual(expectedRoute)
+      expect(path).toEqual(expectedRoute)
     })
 
     it('should return a 4xx error if the token does not contain the parameter', async () => {
@@ -111,9 +137,7 @@ describe('routeParamAlias middleware', () => {
         .set('x-param', token)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
 
     it('should return a 4xx error if the token does not exist', async () => {
@@ -121,9 +145,7 @@ describe('routeParamAlias middleware', () => {
         .post(`/${alias}`)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
 
     it('should return a 4xx error if the query parameter is not a JWT', async () => {
@@ -134,9 +156,7 @@ describe('routeParamAlias middleware', () => {
         .set('x-param', token)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
   })
 
@@ -166,14 +186,32 @@ describe('routeParamAlias middleware', () => {
 
       const token = jwt.sign({ [paramName]: queryParam }, 'super_secret')
 
+      const route = `/${routeParam}`
+
+      const routeWithQuery = `${route}?${tokenName}=${token}`
+
       const res = await request(app)
-        .post(`/${routeParam}?${tokenName}=${token}`)
+        .post(routeWithQuery)
         .expect(200)
         .expect('Content-Type', /json/)
 
-      expect(res.body).toMatchObject({
+      const {
+        params,
+        originalUrl,
+        baseUrl,
+        url,
+        path
+      } = res.body
+
+      expect(params).toMatchObject({
         [paramName]: isAlias ? queryParam : routeParam
       })
+
+      expect(originalUrl).toEqual(routeWithQuery)
+      expect(baseUrl).toEqual('')
+
+      expect(url).toEqual(isAlias ? routeWithQuery.replace(alias, queryParam) : routeWithQuery)
+      expect(path).toEqual(isAlias ? route.replace(alias, queryParam) : route)
     })
 
     it('should return a 4xx error if the token does not contain the parameter', async () => {
@@ -183,9 +221,7 @@ describe('routeParamAlias middleware', () => {
         .post(`/${alias}?${tokenName}=${token}`)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
 
     it('should return a 4xx error if the token does not exist', async () => {
@@ -193,9 +229,7 @@ describe('routeParamAlias middleware', () => {
         .post(`/${alias}`)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
 
     it('should return a 4xx error if the query parameter is not a JWT', async () => {
@@ -205,9 +239,7 @@ describe('routeParamAlias middleware', () => {
         .post(`/${alias}?${tokenName}=${token}`)
         .expect(400)
 
-      expect(res.body).not.toMatchObject({
-        [paramName]: expect.any(String)
-      })
+      expect(res.body.params).toBeFalsy()
     })
   })
 })
